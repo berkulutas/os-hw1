@@ -1,0 +1,3 @@
+ls -l | tr /a-z/ /A-Z/
+cat inputs/input.txt | grep "log" | wc -c
+quit

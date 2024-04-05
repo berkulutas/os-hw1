@@ -1,0 +1,5 @@
+ls
+ls -l
+ls -la
+echo test
+quit
