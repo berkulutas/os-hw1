@@ -149,6 +149,23 @@ void process_parsed(parsed_input *parsed) {
     
     case SEPARATOR_PARA:{
         std::cout << "Parallel: " << std::endl;
+        std::cout << "Num inputs: " << parsed->num_inputs << std::endl;
+        for (int i = 0; i < parsed->num_inputs; i++) {
+            if (inputs[i].type == INPUT_TYPE_PIPELINE) {
+                pipeline_execute2(&inputs[i].data.pline);
+            }
+            else {
+                if (fork()) { // parent
+                    
+                }
+                else { // child
+                    execvp(inputs[i].data.cmd.args[0], inputs[i].data.cmd.args);
+                }
+            }
+        }
+        for (int i = 0; i < parsed->num_inputs; i++) {
+            wait(nullptr);
+        }
         break;
     }
 
