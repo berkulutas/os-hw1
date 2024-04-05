@@ -9,6 +9,8 @@
 #define PIPEREAD 0
 #define PIPEWRITE 1
 
+void process_parsed(parsed_input *parsed); 
+
 void execute_cmd(command* cmd) {
     // quit
     if (strcmp(cmd->args[0], "quit") == 0) {
@@ -36,7 +38,45 @@ void execute(single_input* input) {
     }
     // subshell
     else if ( input->type == INPUT_TYPE_SUBSHELL ) {
-        std::cout << "Subshell: " << std::endl;
+        // parse subshell input
+        parsed_input reparsed;
+        parse_line(input->data.subshell, &reparsed);
+        // fork a process to execute the subshell
+        if (fork()) { // parent
+            wait(nullptr);
+        }
+        else { // child
+            if (reparsed.separator != SEPARATOR_PARA) { // if not parallel exec normally
+                process_parsed(&reparsed);
+                exit(0);
+            }
+            else { // parallel execution
+                std::cout << "Parallel execution: " << input->data.subshell << "\n";
+                std::cout << reparsed.num_inputs << "\n";
+                // create N pipes for N commands
+                int pipes[reparsed.num_inputs][2];
+                for (int i = 0; i < reparsed.num_inputs; i++) {
+                    pipe(pipes[i]);
+                }
+                for (int i = 0; i < reparsed.num_inputs; i++) {
+                    if (fork()) { // parent
+                        close(pipes[i][PIPEREAD]);
+                        close(pipes[i][PIPEWRITE]);
+                    }
+                    else { // child
+                        dup2(pipes[i][PIPEREAD], STDIN);
+                        close(pipes[i][PIPEREAD]);
+                        close(pipes[i][PIPEWRITE]);
+                        process_parsed(&reparsed);
+                        exit(0);
+                    }
+                }
+            }
+            for (int i = 0; i < reparsed.num_inputs; i++) {
+                wait(nullptr);
+            }
+        }
+        free_parsed_input(&reparsed);
     }
 }
 
@@ -148,8 +188,6 @@ void process_parsed(parsed_input *parsed) {
     }
     
     case SEPARATOR_PARA:{
-        std::cout << "Parallel: " << std::endl;
-        std::cout << "Num inputs: " << parsed->num_inputs << std::endl;
         for (int i = 0; i < parsed->num_inputs; i++) {
             if (inputs[i].type == INPUT_TYPE_PIPELINE) {
                 pipeline_execute2(&inputs[i].data.pline);
@@ -179,12 +217,9 @@ int main() {
         std::cout << "/> ";
         std::string input;
         std::getline(std::cin, input);
-
         parsed_input parsed;
         parse_line((char *)input.c_str(), &parsed);
         process_parsed(&parsed);
         free_parsed_input(&parsed);
-    
     }
-
 }
