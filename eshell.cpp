@@ -9,7 +9,9 @@
 #define PIPEREAD 0
 #define PIPEWRITE 1
 
-void process_parsed(parsed_input *parsed); 
+void process_parsed(parsed_input *parsed);
+void pipeline_execute2(pipeline* pline);
+void pipeline_execute(single_input* input, int num_cs); 
 
 void execute_cmd(command* cmd) {
     // quit
@@ -34,7 +36,8 @@ void execute(single_input* input) {
     }
     // pline
     else if ( input->type == INPUT_TYPE_PIPELINE ) {
-        
+        printf("pline geldi\n");
+        pipeline_execute(input, input->data.pline.num_commands);
     }
     // subshell
     else if ( input->type == INPUT_TYPE_SUBSHELL ) {
@@ -42,38 +45,78 @@ void execute(single_input* input) {
         parsed_input reparsed;
         parse_line(input->data.subshell, &reparsed);
         // fork a process to execute the subshell
-        if (fork()) { // parent
-            wait(nullptr);
-        }
-        else { // child
-            if (reparsed.separator != SEPARATOR_PARA) { // if not parallel exec normally
+        if (reparsed.separator != SEPARATOR_PARA) { // sequential execution of subshell
+            if (fork()) { // main
+                wait(nullptr);
+            }
+            else { // subshell
                 process_parsed(&reparsed);
                 exit(0);
             }
-            else { // parallel execution
-                std::cout << "Parallel execution: " << input->data.subshell << "\n";
-                std::cout << reparsed.num_inputs << "\n";
-                // create N pipes for N commands
+        }
+        else { // parallel execution subshell
+            if (fork()) { // main
+                wait(nullptr);
+            }
+            else { // subshell
+                // create n pipes for n processe
                 int pipes[reparsed.num_inputs][2];
                 for (int i = 0; i < reparsed.num_inputs; i++) {
                     pipe(pipes[i]);
                 }
+                // create n children
                 for (int i = 0; i < reparsed.num_inputs; i++) {
-                    if (fork()) { // parent
-                        close(pipes[i][PIPEREAD]);
-                        close(pipes[i][PIPEWRITE]);
+                    if (fork()) { // parent (inital subshell)
+                        
                     }
                     else { // child
                         dup2(pipes[i][PIPEREAD], STDIN);
-                        close(pipes[i][PIPEREAD]);
-                        close(pipes[i][PIPEWRITE]);
-                        process_parsed(&reparsed);
-                        exit(0);
+                        // close all pipe ends
+                        for (int j = 0; j < reparsed.num_inputs; j++) {
+                            close(pipes[j][PIPEREAD]);
+                            close(pipes[j][PIPEWRITE]);
+                        }
+                        // execute cmd
+                        if (reparsed.inputs[i].type == INPUT_TYPE_COMMAND) {
+                            execvp(reparsed.inputs[i].data.cmd.args[0], reparsed.inputs[i].data.cmd.args);
+                        }
+                        // todo execute pipeline
+                        else if (reparsed.inputs[i].type == INPUT_TYPE_PIPELINE) {
+                            // printf("pipeline geldi\n");
+                            pipeline_execute2(&reparsed.inputs[i].data.pline);
+                            exit(0);
+                        }
+                        
                     }
                 }
-            }
-            for (int i = 0; i < reparsed.num_inputs; i++) {
-                wait(nullptr);
+                if (fork()) { // parent (inital subshell)
+                    // close all pipe ends
+                    for (int i = 0; i < reparsed.num_inputs; i++) {
+                        close(pipes[i][PIPEREAD]);
+                        close(pipes[i][PIPEWRITE]);
+                    }
+                }
+                else { // repeater
+                    // while until eof on stdin read from stdin write to all pipes
+                    char c;
+                    while (read(STDIN, &c, 1) > 0) {
+                        for (int i = 0; i < reparsed.num_inputs; i++) {
+                            write(pipes[i][PIPEWRITE], &c, 1);
+                        }
+                    }
+                    // close all pipe ends
+                    for (int i = 0; i < reparsed.num_inputs; i++) {
+                        close(pipes[i][PIPEREAD]);
+                        close(pipes[i][PIPEWRITE]);
+                    }
+                    exit(0);
+                }
+
+                // subshell wait for all children and repeater
+                for (int i = 0; i < reparsed.num_inputs + 1; i++) {
+                    wait(nullptr);
+                }           
+                exit(0);
             }
         }
         free_parsed_input(&reparsed);
@@ -81,6 +124,7 @@ void execute(single_input* input) {
 }
 
 void pipeline_execute(single_input* input, int num_cs) {
+    pid_t pidarr[num_cs];
     // create pipes
     int pipes[num_cs - 1][2];
     for (int i = 0; i < num_cs - 1; i++) {
@@ -88,7 +132,7 @@ void pipeline_execute(single_input* input, int num_cs) {
     }
     // create children
     for (int i = 0; i < num_cs; i++) {
-        if (fork()) { // parent
+        if (pidarr[i] = fork()) { // parent
             if (i != 0) {
                 close(pipes[i-1][PIPEREAD]);
             }
@@ -114,11 +158,12 @@ void pipeline_execute(single_input* input, int num_cs) {
     }
     // wait for all children
     for (int i = 0; i < num_cs; i++) {
-        wait(nullptr);
+        waitpid(pidarr[i], nullptr, 0);
     }
 }
 
 void pipeline_execute2(pipeline* pline) {
+    pid_t pidarr[pline->num_commands];
     // create pipes
     int pipes[pline->num_commands - 1][2];
     for (int i = 0; i < pline->num_commands - 1; i++) {
@@ -126,7 +171,7 @@ void pipeline_execute2(pipeline* pline) {
     }
     // create children
     for (int i = 0; i < pline->num_commands; i++) {
-        if (fork()) { // parent
+        if (pidarr[i] = fork()) { // parent
             if (i != 0) {
                 close(pipes[i-1][PIPEREAD]);
             }
@@ -152,7 +197,7 @@ void pipeline_execute2(pipeline* pline) {
     }
     // wait for all children
     for (int i = 0; i < pline->num_commands; i++) {
-        wait(nullptr);
+        waitpid(pidarr[i], nullptr, 0);
     }
 }
 

@@ -1,10 +1,4 @@
-log asdf
-
-asdfasdf 
+test
 a
-sdf
-as 
-
-
-asdf 
-log aa
+b
+c
