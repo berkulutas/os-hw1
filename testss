@@ -1,0 +1,56 @@
+Compiling eshell with make
+g++ -g eshell.cpp parser.c -o eshell
+Running tester...
+Testcase0 is running.
+Input: ls -l
+The outputs do not match 
+Testcase0: FAILED
+Testcase1 is running.
+Input: ls -l ; ls -al
+The outputs do not match 
+Testcase1: FAILED
+Testcase2 is running.
+Input: echo 'Hello'
+The outputs do not match 
+Testcase2: FAILED
+Testcase3 is running.
+Input: ls -l | tr /a-z/ /A-Z/
+The outputs do not match 
+Testcase3: FAILED
+Testcase4 is running.
+Input: ls -l , ls -al
+The outputs do not match 
+Testcase4: FAILED
+Testcase5 is running.
+Input: ls -l ; echo 'Hello'
+The outputs do not match 
+Testcase5: FAILED
+Testcase6 is running.
+Input: (ls -l ; echo 'Hello') | grep x | tr /a-g/ /A-G/
+The outputs do not match 
+Testcase6: FAILED
+Testcase7 is running.
+Input: (ls -l /usr/lib | grep x) | ( tr /a-c/ /A-C/ , echo done)
+(ls -l /usr/lib | grep x) | ( tr /a-c/ /A-C/ , echo done) | wc -l
+The outputs do not match 
+Testcase7: FAILED
+Testcase8 is running.
+Input: (ls -l /usr/lib | grep x) | ( tr /a-z/ /A-Z/ , echo done) | wc -l
+The outputs do not match 
+Testcase8: FAILED
+Testcase9 is running.
+Input: (ls -l /usr/lib | grep a ) | (cat ; echo Hello ; ls -al /usr/lib)
+The outputs do not match 
+Testcase9: FAILED
+Testcase10 is running.
+Input: ls -al /usr/lib | tr /a-l/ /A-L/ | ( grep A , grep B )
+The outputs do not match 
+Testcase10: FAILED
+Testcase11 is running.
+Input: ls -al /usr/lib | tr /a-l/ /A-L/ | ( grep A , grep B , wc -l )
+The outputs do not match 
+Testcase11: FAILED
+Testcase12 is running.
+Input: ls -al /usr/lib | tr /a-l/ /A-L/ | (  wc -c, grep A , wc -l , grep B )
+The outputs do not match 
+Testcase12: FAILED
