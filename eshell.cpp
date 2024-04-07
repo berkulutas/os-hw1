@@ -36,7 +36,6 @@ void execute(single_input* input) {
     }
     // pline
     else if ( input->type == INPUT_TYPE_PIPELINE ) {
-        printf("pline geldi\n");
         pipeline_execute(input, input->data.pline.num_commands);
     }
     // subshell
@@ -82,7 +81,6 @@ void execute(single_input* input) {
                         }
                         // todo execute pipeline
                         else if (reparsed.inputs[i].type == INPUT_TYPE_PIPELINE) {
-                            // printf("pipeline geldi\n");
                             pipeline_execute2(&reparsed.inputs[i].data.pline);
                             exit(0);
                         }
@@ -205,7 +203,6 @@ void pipeline_execute2(pipeline* pline) {
 
 void process_parsed(parsed_input *parsed) {
     single_input* inputs = parsed->inputs;
-    // pretty_print(parsed);
     switch (parsed->separator)
     {
     case SEPARATOR_NONE: {
